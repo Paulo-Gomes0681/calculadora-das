@@ -1,0 +1,85 @@
+
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>Calculadora DAS - Simples Nacional</title>
+    <style>
+        body { font-family: Arial, sans-serif; background-color: #f4f4f4; padding: 20px; }
+        .container { background: #fff; padding: 20px; border-radius: 8px; max-width: 500px; margin: auto; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+        h2 { text-align: center; color: #2c3e50; }
+        label, input { display: block; width: 100%; margin-bottom: 10px; font-size: 16px; }
+        input { padding: 10px; border: 1px solid #ccc; border-radius: 4px; }
+        button { background: #27ae60; color: white; padding: 10px; border: none; border-radius: 4px; font-size: 16px; cursor: pointer; }
+        button:hover { background: #219150; }
+        .resultado { margin-top: 20px; font-size: 16px; }
+        .valor { color: #27ae60; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>Calculadora DAS - Simples Nacional</h2>
+        <label for="rbt12">Receita Bruta dos últimos 12 meses (RBT12):</label>
+        <input type="text" id="rbt12" placeholder="Ex: R$ 500.000,00" oninput="mascaraMoeda(this)">
+
+        <label for="receitaMes">Receita do mês:</label>
+        <input type="text" id="receitaMes" placeholder="Ex: R$ 20.000,00" oninput="mascaraMoeda(this)">
+
+        <button onclick="calcularDAS()">Calcular</button>
+
+        <div id="resultado" class="resultado"></div>
+    </div>
+
+    <script>
+    function mascaraMoeda(campo) {
+        let valor = campo.value.replace(/\D/g, '');
+        valor = (parseInt(valor, 10) || 0).toString();
+        if (valor.length === 0) {
+            campo.value = '';
+            return;
+        }
+        while (valor.length < 3) valor = '0' + valor;
+        let reais = valor.slice(0, -2);
+        let centavos = valor.slice(-2);
+        reais = reais.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+        campo.value = 'R$ ' + reais + ',' + centavos;
+    }
+
+    function parseMoeda(valor) {
+        return parseFloat(valor.replace(/[^\d,]/g, '').replace(',', '.')) || 0;
+    }
+
+    const faixas = [
+        { limite: 180000.00, aliquota: 0.06, deducao: 0 },
+        { limite: 360000.00, aliquota: 0.112, deducao: 9360 },
+        { limite: 720000.00, aliquota: 0.135, deducao: 17640 },
+        { limite: 1800000.00, aliquota: 0.16, deducao: 35640 },
+        { limite: 3600000.00, aliquota: 0.21, deducao: 125640 },
+        { limite: 4800000.00, aliquota: 0.33, deducao: 648000 }
+    ];
+
+    function calcularDAS() {
+        const rbt12 = parseMoeda(document.getElementById('rbt12').value);
+        const receitaMes = parseMoeda(document.getElementById('receitaMes').value);
+        if (isNaN(rbt12) || isNaN(receitaMes)) {
+            document.getElementById('resultado').innerHTML = "<p style='color:red;'>Preencha os dois campos corretamente.</p>";
+            return;
+        }
+
+        const faixa = faixas.find(f => rbt12 <= f.limite);
+        if (!faixa) {
+            document.getElementById('resultado').innerHTML = "<p style='color:red;'>RBT12 acima do limite permitido para o Simples Nacional.</p>";
+            return;
+        }
+
+        const aliquotaEfetiva = ((rbt12 * faixa.aliquota) - faixa.deducao) / rbt12;
+        const das = receitaMes * aliquotaEfetiva;
+
+        document.getElementById('resultado').innerHTML = `
+            <p>Alíquota Efetiva: <span class="valor">${(aliquotaEfetiva * 100).toFixed(2)}%</span></p>
+            <p>Valor do DAS: <span class="valor">${das.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span></p>
+        `;
+    }
+    </script>
+</body>
+</html>
